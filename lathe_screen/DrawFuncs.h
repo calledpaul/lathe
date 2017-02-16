@@ -32,16 +32,20 @@ void drawThread(int x, int y, bool active = false) {
   _drawThread(x+1, y, color);
 }
 
+void drawOutline(int color) {
+  tft.drawRect(0, 0, 320, 240, color);
+  tft.drawRect(205, 0, 320, 40, color);
+  tft.drawLine(0, 80, 320, 80, color);
+  tft.drawLine(0, 160, 320, 160, color);
+  tft.drawLine(0, 189, 320, 189, color);  
+  tft.drawLine(235, 160, 235, 189, color);
+  tft.drawLine(147, 160, 147, 189, color);
+}
 
 void drawBackground() {
-  tft.drawRect(0, 0, 320, 240, WHITE);
-  tft.drawRect(205, 0, 320, 40, WHITE);
-  tft.drawLine(0, 80, 320, 80, WHITE);
-  tft.drawLine(0, 160, 320, 160, WHITE);
+  drawOutline(WHITE);
+  
   lcdtext(215, 15, "     RPM", WHITE, 2)
-  tft.drawLine(0, 189, 320, 189, WHITE);  
-  tft.drawLine(235, 160, 235, 189, WHITE);
-  tft.drawLine(147, 160, 147, 189, WHITE);
 
   lcdtext(10, 52, "X", WHITE, 3)
   lcdtext(10, 132, "Y", WHITE, 3)
@@ -64,15 +68,27 @@ void drawBackground() {
 void dummy(int  v, bool active) { }
 
 void inputXpos(int  v, bool active) { char buff[10]; dtostrf(float(v)/100, 6, 2, buff); lcdtext_def(20, 10, buff, GREEN, 4, active);}
-void inputXDefPos(int  v, bool active) { char buff[10]; dtostrf(float(v)/100, 6, 2, buff); lcdtext_def(55, 50, buff, GREEN, 3, active);}
+void inputXDefPos(int  v, bool active) {
+  tft.fillRect(30, 50, 20, 25, v ? RED : BLACK);
+  if (v) {
+    lcdtext_only(35, 55, 'A', WHITE, 2);
+  }
+  char buff[10]; dtostrf(float(v)/100, 6, 2, buff); lcdtext_def(55, 50, buff, GREEN, 3, active);
+}
 void inputYpos(int  v, bool active) { char buff[10]; dtostrf(float(v)/50, 6, 2, buff); lcdtext_def(20, 90, buff, YELLOW, 4, active);}
-void inputYDefPos(int  v, bool active) { char buff[10]; dtostrf(float(v)/50, 6, 2, buff); lcdtext_def(55, 130, buff, YELLOW, 3, active); }
+void inputYDefPos(int  v, bool active) {
+  tft.fillRect(30, 130, 20, 25, v ? RED : BLACK);
+  if (v) {
+    lcdtext_only(35, 135, 'A', WHITE, 2);
+  }
+  char buff[10]; dtostrf(float(v)/50, 6, 2, buff); lcdtext_def(55, 130, buff, YELLOW, 3, active);
+}
 
 void inputCut(int v, bool active) {
   char strs[3][16] = { 
     " LEFT-INSIDE   ",
     " RIGHT-OUTSIDE ",
-    " <> BOTH        "
+    " <> BOTH       "
   };
   lcdtext_def(125, 205, strs[v], CYAN, 2, active);
 }
@@ -125,6 +141,13 @@ void inputMode(int  v, bool active) {
 void outputShaftAngle(int v, bool active) {char buff[6]; sprintf(buff, "%3d", abs(round(v*0.087890625))); lcdtext(265, 87, buff, CYAN, 2) };
 void outputXSpeed(int v, bool active) {char buff[6]; dtostrf(float(v)/100, 4, 2, buff); lcdtext(205, 50, buff, GREEN, 3) };
 void outputYSpeed(int v, bool active) {char buff[6]; dtostrf(float(v)/100, 4, 2, buff); lcdtext(205, 130, buff, YELLOW, 3) };
+
+void outputProgram(int v, bool active) {
+  for(int i=1; i < 8; i++) {
+    tft.drawRect(i, i, 320-i*2, 240-i*2, v ? RED : BLACK);
+  }
+  drawOutline(v ? RED : WHITE);
+}
 
 void drawModeLabelBack() { tft.fillRect(2, 192, 316, 47, BLACK); }
 void drawModeLabelCut() { drawModeLabelBack(); lcdtext(10, 205, "Direction:", WHITE, 2) }

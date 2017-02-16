@@ -49,6 +49,35 @@ void stopEngine() {
   }
 }
 
+void programActive(bool st) {
+  if (state[program] != st) {
+    programChange = true;
+    state[program] = st ? 1 : 0;
+    if (!st) {
+      //safety precaution after turning auto mode off
+      halt = true;
+      if (disablePotsCheck) {
+        disablePotsCheck = false;
+        disablePotY = false;
+        disablePotX = false;
+        forceYSpeedCheck = true;
+        forceXSpeedCheck = true;
+      }
+    } else {
+      halt = false;
+    }
+  }
+}
+void programCorrectEnd() {
+  programActive(false);
+  programChange = false;
+  stopEngine();
+}
+
+bool programState() {
+  return state[program] == 1;
+}
+
 void setUpFastPrescaler() {
   ADCSRA &= ~(bit (ADPS0) | bit (ADPS1) | bit (ADPS2)); // clear prescaler bits
   //  ADCSRA |= bit (ADPS0);                               //   2  

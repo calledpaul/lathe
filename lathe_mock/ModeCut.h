@@ -17,7 +17,7 @@ void checkXSwitch() {
   if (prev_xSwitchState != xSwitchState) {
     if (xSwitchState != OFF) {
       xStepDirection = xSwitchState; 
-      updateXAxisSpeed();
+      updateXAxisSpeed();      
     }
     prev_xSwitchState = xSwitchState;
     halt = false;
@@ -50,7 +50,7 @@ void processManualY() {
 
 void processFullManualMode() {
   processManualX();
-  //processManualY();
+  processManualY();
 }
 
 bool xReturnRule() {
@@ -75,7 +75,7 @@ void initXStepperCut() {
   if (xAxisStepper.currentPosition() && !xAxisStepper.distanceToGo() && !xStepDirChange) {
     xAxisStepper.setCurrentPosition(0);
   }
-  if (xAxisStepper.currentPosition() == 0) {      
+  if (xAxisStepper.currentPosition() == 0) {
     moveXAxisTo(state[xAxisTo], LEFT, getModeCutXNextSpeed());
     xStepDirChange = false;
   }
@@ -154,8 +154,13 @@ long _calculateNextYStep() {
 void processFullCutMode(bool init, bool skipFinalStep = false, float xToYDecrementRatio = 0) {
   if (init) {
     initXStepperCut();
+    // xAxisStepper.setCurrentPosition(0);
+    // moveXAxisTo(state[xAxisTo], LEFT, getModeCutXNextSpeed());
+
     initYStepperCut();
-    yAxisStepper.stepContinuous(_calculateNextYStep());
+    if (yAxisStepper.currentPosition() == yAxisStepper.referencePoint) {
+      yAxisStepper.stepContinuous(_calculateNextYStep());
+    }
     fullCutModeLastRound = false;
   }
   if (yAxisStepper.distanceToGo() != 0 || fullCutModeLastRound) {
@@ -191,20 +196,37 @@ void processFullCutMode(bool init, bool skipFinalStep = false, float xToYDecreme
     // just not needed
     //changeYAxisDirection(STEPPER_MAX_SAFE_SPEED);
     //yAxisStepper.stepMM(1);
-    program = false;
-    stopEngine();
+    yAxisStepper.referencePoint = yAxisStepper.currentPosition();
+    programCorrectEnd();
   }
 }
 
-void processModeCut(bool init) {
-  if (state[xAxisTo] && state[yAxisTo]) {
-    processFullCutMode(init);
-  } else if (state[xAxisTo]) {
-    processModeCutX(init);
-    processManualY();
-  } else if (state[yAxisTo]) {
-    processModeCutY(init);
-    processManualX();
+void processModeCut(bool init, bool end) {
+  if (end) {
+    // if (state[xAxisTo] && state[yAxisTo]) {
+    //   ignoreREDButton = true;
+    //   disablePotsCheck = true;
+
+    //   yStepDirection = !state[threadType];
+    //   updateYAxisSpeed(STEPPER_MAX_SAFE_SPEED);
+    //   yAxisStepper.stepContinuous(cutterBuffer);
+
+    //   moveXAxisTo(0, state[threadDir], STEPPER_MAX_SAFE_SPEED);
+    //   xAxisStepper.stepContinuousToDestination();
+
+    //   disablePotsCheck = false;
+    //   ignoreREDButton = false;
+    // }
+  } else {
+    if (state[xAxisTo] && state[yAxisTo]) {    
+      processFullCutMode(init);
+    } else if (state[xAxisTo]) {    
+      processModeCutX(init);
+      processManualY();
+    } else if (state[yAxisTo]) {
+      processModeCutY(init);
+      processManualX();
+    }
   }
 }
 

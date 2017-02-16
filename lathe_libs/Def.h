@@ -13,14 +13,14 @@
 #define MODE_ANGLE 1
 #define MODE_THREAD 2
 
-#define STEPPER_MAX_PHYSICAL_SPEED 204
-#define STEPPER_MAX_SPEED 204
+#define STEPPER_MAX_PHYSICAL_SPEED 160
+#define STEPPER_MAX_SPEED 160
 #define STEPPER_MAX_SAFE_SPEED 120
 #define STEPPER_CONTINUOUS_SAFE_SPEED 10
 #define STEPS_PER_REVOLUTION 200 * 16
 
 #define X_AXIS_PLAY_MM 0.35
-#define Y_AXIS_PLAY_MM 0.05
+#define Y_AXIS_PLAY_MM 0.12
 
 //pots
 #define PIN_X_AXIS_SPEED 7
@@ -70,12 +70,13 @@
 #define xAxisSpeed 12
 #define yAxisSpeed 13
 #define shaftAngle 14
+#define program 15
 
 
 #define autoModeDelay 4000
 
-bool program = false;
 bool programChange = false;
+bool ignoreREDButton = false;
 //start with no action
 bool halt = true;
 bool disablePotsCheck = false;
@@ -100,13 +101,13 @@ int stateLimits[11][3] = {
 	{0, 2}, //{MODE_CUT, MODE_ANGLE, MODE_THREAD}
 	{0, 2}, //{LEFT, BOTH, RIGHT}
 	{-900, 900, 1},
-	{0, 1, 0}, //{RIGHT, LEFT}
-	{0, 1, 0}, //{INSIDE, OUTSIDE}
+	{0, 1}, //{RIGHT, LEFT}
+	{0, 1}, //{INSIDE, OUTSIDE}
 	{0, 28} 
 };
 
-const int stateCount = 15;
-volatile int oldState[stateCount] = {0}, state[stateCount] = { 0, 0, 0, 0, 0, MODE_CUT, LEFT, 0,  RIGHT, INSIDE, 5, 0, 0, 0, 0 };
+const int stateCount = 16;
+volatile int oldState[stateCount] = {0}, state[stateCount] = { 0, 0, 0, 0, 0, MODE_CUT, LEFT, 0,  RIGHT, INSIDE, 5, 0, 0, 0, 0, 0};
 
 typedef struct thread_temp {
 	char label[10];

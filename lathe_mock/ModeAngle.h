@@ -3,51 +3,44 @@
 
 #include <Utils.h>
 #include "ModeCut.h"
+#include "Inputs.h"
 
 int prevAngle = 0, originalXAxisTo;
 float angleRatio = 0;
 bool finalizeAutoAngleCut = false;
 
-float calculateAngle() {
-
+int calculateAngle() {
+	return round(atan(float(abs(state[yAxisTo]-state[yAxis]))/state[xAxisTo])*1800/3.14);
 }
 
 float getAxisRatio() {
 	if (prevAngle != state[angle]) {
 		prevAngle = state[angle];
-		angleRatio = float(abs(state[angle]))/900;
+		angleRatio = tan(3.14 * abs(float(state[angle])/10)/180);
 	}
 	return angleRatio;
 }
 
-int getAngleYAxisDirection() {
-	int dir = xStepDirection == RIGHT ? INSIDE : OUTSIDE;
-	if (state[angle] < 0) {
-		dir = !dir;
-	}
-	return dir;
-}
 
 void setVarioSpeed() {
-	int refXSpeed = state[xAxisSpeed], refYSpeed;
-	if (refXSpeed > STEPPER_MAX_SAFE_SPEED) {
-		refXSpeed = STEPPER_MAX_SAFE_SPEED;
+	float refYSpeed, refXSpeed;
+	int inputSpeed = readPotY();
+	if (inputSpeed > STEPPER_MAX_SAFE_SPEED) {
+		inputSpeed = STEPPER_MAX_SAFE_SPEED;
 	}
-	refYSpeed = getAxisRatio()*refXSpeed;
-	if (refYSpeed > STEPPER_MAX_SAFE_SPEED) {
-		refYSpeed = STEPPER_MAX_SAFE_SPEED;
-		refXSpeed = refYSpeed/getAxisRatio();	
+	if (getAxisRatio() > 1) {
+		refYSpeed = abs(state[angle]) < 895 ? inputSpeed : 0;
+		refXSpeed = refYSpeed ? refYSpeed/getAxisRatio() : inputSpeed;
+	} else {
+		refXSpeed = abs(state[angle]) < 895 ? inputSpeed : 0;
+		refYSpeed = refXSpeed ? refXSpeed*getAxisRatio() : inputSpeed;
 	}
-
-	if (state[xAxisSpeed] != refXSpeed) {
-		updateXAxisSpeed(refXSpeed*signedDir[xStepDirection]);
-	}
-	if (state[yAxisSpeed] != refYSpeed) {
-		updateYAxisSpeed(refYSpeed*signedDir[getAngleYAxisDirection()]);
-	}
+	//pp(refYSpeed, ' ', refXSpeed)
+	updateXAxisSpeed(refXSpeed);
+	updateYAxisSpeed(refYSpeed);
 }
 //noisy mind
-void processModeAngleAuto(bool init) {
+void processModeAngleAuto(bool init, bool end) {
 	if (init) {
 		originalXAxisTo = state[xAxisTo];
 		state[cut] = LEFT;
@@ -59,8 +52,7 @@ void processModeAngleAuto(bool init) {
 			xAxisStepper.runSpeedToPosition();
 			yAxisStepper.runSpeedToPosition();
 			if (yAxisStepper.distanceToGo() == 0 || xAxisStepper.distanceToGo() == 0) {
-				program = false;
-    		stopEngine();
+				programCorrectEnd();
 			}
 	} else {
 		processFullCutMode(init, true, getAxisRatio());
@@ -75,35 +67,36 @@ void processModeAngleAuto(bool init) {
 	}
 }
 
-void processModeAngleManual(bool init) {
-	if (init) {
-		disablePotY = true;		
-	}
+void processModeAngleManual(bool init, bool end) {
 	checkYSwitchAction.check();
-  if (ySwitchState != OFF) {  	
+  if (ySwitchState != OFF) {
+		disablePotsCheck = true;
 
 		xStepDirection = ySwitchState == INSIDE ? RIGHT : LEFT;
 		if (state[angle] < 0) {
-			xStepDirection != xStepDirection;
+			xStepDirection = !xStepDirection;
 		}
+		yStepDirection = ySwitchState;
 		setVarioSpeed();
+		
 		if (!halt) {
 			xAxisStepper.runSpeed();
 			yAxisStepper.runSpeed();
 		}
   }	else {
+  	disablePotsCheck = false;
   	processManualX();
   }
 }
 
-void processModeAngle(bool init) {
+void processModeAngle(bool init, bool end) {
   if (state[angle]) {
   	if (state[xAxisTo] && state[yAxisTo]) {
-      processModeAngleAuto(init);
+      processModeAngleAuto(init, end);
     //} else if (state[yAxisTo]) {
     //	processModeAngleSemiAuto(init);
     } else {
-      processModeAngleManual(init);
+      processModeAngleManual(init, end);
     }
   }
 }

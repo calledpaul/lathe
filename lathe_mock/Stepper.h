@@ -22,13 +22,13 @@ class AStepper : public AccelStepper {
     void removePlay(int direction) {
       unsigned long currentPos = currentPosition(), spd = speed(), target = targetPosition();
       setCurrentPosition(0);
-      setSpeed(maxspeedSteps*signedDir[direction]);
+      setSpeed(maxspeedSteps*signedDir[direction] / 1.5);
       while (currentPosition() != round(play * stepsToMM * signedDir[direction])) runSpeed();      
       setCurrentPosition(currentPos);
       moveTo(target);
       setSpeed(spd);
     }
-    void setSpeedRemovePlay(int newSpeed) {
+    void setSpeedRemovePlay(float newSpeed) {
       int spd = speed();
       if ((speed() < 0 && newSpeed > 0) || (speed() > 0 && newSpeed < 0)){
         removePlay(newSpeed > 0 ? 1 : 0);
@@ -38,12 +38,20 @@ class AStepper : public AccelStepper {
     void stepMM(float mm) {
       stepContinuous(round(mm * stepsToMM));
     }
-    void stepContinuous(long steps) {      
+    void stepContinuous(long steps, bool toPosition = true) {
       long snapshot = currentPosition();
+      //pp(abs(snapshot - currentPosition()), " " , steps)
+      //int entries = 0;
       while (abs(snapshot - currentPosition()) < steps) {
+        //entries++;
         if (emergencyFunc && emergencyFunc()) break;
-        runSpeedToPosition();
+        if(toPosition)
+          runSpeedToPosition();
+        else
+          runSpeed();
       }
+      //p(entries);
+      //p("  ")
     }
     void stepContinuousToDestination() {
       long snapshot = currentPosition();
@@ -85,27 +93,32 @@ float getYSpeedAsMM() {
   return float(state[yAxisSpeed])/100;
 }
 
-void updateXAxisSpeed(unsigned int newSpeed = 0) {
-  if (newSpeed) state[xAxisSpeed] = newSpeed;
-  if (state[xAxisSpeed] == 0) state[xAxisSpeed] = 1;
-  if (state[xAxisSpeed] > STEPPER_MAX_SPEED) state[xAxisSpeed] = STEPPER_MAX_SPEED;
-  long spd = round(speedRatio*state[xAxisSpeed]);
-  if (state[xAxisSpeed] < 4) {
-    spd /= 4;
+void updateXAxisSpeed(float newSpeed = 0, bool pure = false) {
+  float spd;
+  if (!newSpeed) {
+    spd = abs(xAxisStepper.speed());
+  } else {
+    spd = constrain(newSpeed, 0, STEPPER_MAX_SPEED);
+    state[xAxisSpeed] = spd;
+    if (!pure and spd <= 1) {
+      spd /= 2; 
+    }
   }
-  xAxisStepper.setSpeedRemovePlay(spd*signedDir[xStepDirection]);
-  //xAxisStepper.setAcceleration(newSpeed >= STEPPER_MAX_SAFE_SPEED ? 50 : 0.0);
+  xAxisStepper.setSpeedRemovePlay(speedRatio*spd*signedDir[xStepDirection]);
 }
 
-void updateYAxisSpeed(unsigned int newSpeed = 0) {
-  if (newSpeed) state[yAxisSpeed] = newSpeed;
-  if (state[yAxisSpeed] == 0) state[yAxisSpeed] = 1;
-  if (state[yAxisSpeed] > STEPPER_MAX_SPEED) state[yAxisSpeed] = STEPPER_MAX_SPEED;
-  long spd = round(speedRatio*state[yAxisSpeed]);
-  if (state[yAxisSpeed] < 4) {
-    spd /= 4;
+void updateYAxisSpeed(float newSpeed = 0, bool pure = false) {
+  float spd;
+  if (!newSpeed) {
+    spd = abs(yAxisStepper.speed());
+  } else {
+    spd = constrain(newSpeed, 0, STEPPER_MAX_SPEED);
+    state[yAxisSpeed] = spd;
+    if (!pure and spd <= 1) {
+      spd /= 2; 
+    }
   }
-  yAxisStepper.setSpeedRemovePlay(spd*signedDir[yStepDirection]);
+  yAxisStepper.setSpeedRemovePlay(speedRatio*spd*signedDir[yStepDirection]);
 }
 
 void moveXAxisTo(long to, int dir = -1, int speed = 0) {
@@ -132,6 +145,7 @@ void changeXAxisDirection(int speed = 0) {
 }
 
 void changeYAxisDirection(int speed = 0) {
+  yStepDirection = prevYStepBy*-1 > 0;
   moveYAxisBy(prevYStepBy*-1, speed);
 }
 

@@ -12,6 +12,7 @@
 
 Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 
+#define lcdtext_only(x, y, text, color, size) tft.setCursor(x, y); tft.setTextColor(color); tft.setTextSize(size); tft.print(text);
 #define lcdtext_def(x, y, text, color, size, active) tft.setCursor(x, y); tft.setTextColor( active ? BLACK : color, active ? WHITE : BLACK); tft.setTextSize(size); tft.print(text);
 #define lcdtext(x, y, text, color, size) lcdtext_def(x, y, text, color, size, false)
 

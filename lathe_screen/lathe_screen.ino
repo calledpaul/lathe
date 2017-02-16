@@ -7,7 +7,7 @@ typedef struct tag_name {
    bool active;
 } drawItem;
 
-const int componentsSize = 15;
+const int componentsSize = stateCount;
 drawItem components[componentsSize] = {
   {dummy},
   {inputXpos, true},
@@ -23,7 +23,8 @@ drawItem components[componentsSize] = {
   {outputShaftSpeed},
   {outputXSpeed},
   {outputYSpeed},
-  {outputShaftAngle}
+  {outputShaftAngle},
+  {outputProgram}
 };
 volatile int stateChange[componentsSize];
 

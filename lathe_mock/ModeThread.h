@@ -35,16 +35,20 @@ void stepThreadCutter() {
 	int step = _calculateNextThreadYStep();
 	cutDepth += step;
 	//pp("in+", " ", step >> 5)
-	//pp("cut_depth", " ", cutDepth >> 5)
+	pp("cut_depth", " ", cutDepth >> 5)
 	yAxisStepper.stepContinuous(step);
 }
 
 void stepOutThreadCutter(bool clean = false) {	
-	changeYAxisDirection(STEPPER_MAX_SAFE_SPEED);
-	// pp("out", " ", (cutDepth + (clean ? 0 : 320)) >> 5)
-	// yAxisStepper.stepContinuous(cutDepth + (clean ? 0 : 320)); //+ 0.1
-	//pp("out", " ", cutDepth >> 5)
-	yAxisStepper.stepContinuous(cutDepth); //+ 0.1
+	if (clean) {
+		yStepDirection = !state[threadType];
+		updateYAxisSpeed(STEPPER_MAX_SAFE_SPEED);
+		yAxisStepper.stepContinuous(cutDepth-round(Y_AXIS_PLAY_MM*stepsToMM), false);
+	} else {
+		changeYAxisDirection(STEPPER_MAX_SAFE_SPEED);
+		//pp("out", " ", cutDepth >> 5)
+		yAxisStepper.stepContinuous(cutDepth);
+	}
 }
 
 void stepInThreadCutter() {
@@ -53,8 +57,12 @@ void stepInThreadCutter() {
 	yAxisStepper.stepContinuous(cutDepth); //+ 0.1
 }
 
+bool canThreadingStart() {
+	return state[rpm] < STEPPER_MAX_SAFE_SPEED / threadDef[state[threadStep]].value;
+}
+
 void threadingStart() {
-	if (state[rpm] < STEPPER_MAX_SAFE_SPEED / threadDef[state[threadStep]].value) {
+	if (canThreadingStart()) {
 		precomputedStepRatio = (state[threadDir] == RIGHT ? -0.78125 : 0.78125) * threadDef[state[threadStep]].value;
 		triggerTheadingStart = true;
 		encoderTickDone = 0;
@@ -68,12 +76,16 @@ void shaftZeroPointTick() {
 	}
 }
 
+float getThreadDepth() {
+	return (state[threadStep] < 14 ? 0.614 : 0.64037) * threadDef[state[threadStep]].value;
+}
+
 void initThreadCutDepth() {
 	if (!cutDepth) {
-		float depth = (state[threadStep] < 14 ? 0.614 : 0.64037) * threadDef[state[threadStep]].value;
-		p(round(depth*signedDir[state[threadType]]*100))
+		float depth = getThreadDepth();
+		state[yAxisTo] = round(depth*100);
+		//p(round(depth*signedDir[state[threadType]]*100))
     moveYAxisBy(round(depth*signedDir[state[threadType]]*100), STEPPER_MAX_SAFE_SPEED);
-    cutDepth = 0;
     stepThreadCutter();
 		fullCutModeLastRound = false;
 		threadingStart();
@@ -82,28 +94,26 @@ void initThreadCutDepth() {
 
 void processModeThreadAuto(bool init) {
   if (init) {
-    initXStepperCut();
+  	xAxisStepper.setCurrentPosition(0);
+    moveXAxisTo(state[xAxisTo], !state[threadDir], getModeCutXNextSpeed());
     initThreadCutDepth();
     disablePotsCheck = true;
   }
   if (yAxisStepper.distanceToGo() != 0 || fullCutModeLastRound) {
 	  if (xAxisStepper.distanceToGo() == 0 && encoderTickDone) {
 	  	shaftEncoder.tickCallbackEnabled = false;
+	  	ignoreREDButton = true;
 			stepOutThreadCutter(fullCutModeLastRound);
 			if (fullCutModeLastRound) {
 				fullCutModeLastRound = false;
 
 				float rotationsOfShaftPerSecond = float(state[rpm])/60;
 				int cleanSpd = round(16 * rotationsOfShaftPerSecond);
-				//pp("speed", " ", cleanSpd)
+
 				changeXAxisDirection(cleanSpd);
 				xAxisStepper.stepContinuousToDestination();
-				//updateXAxisSpeed(STEPPER_MAX_SAFE_SPEED);
-				//xAxisStepper.stepMM(20);
-				stopEngine();
-		    program = false;
-
-			} else {
+				programCorrectEnd();
+			} else {				
 				changeXAxisDirection(STEPPER_MAX_SAFE_SPEED);
 				xAxisStepper.stepContinuousToDestination();
 				changeXAxisDirection(STEPPER_MAX_SAFE_SPEED);
@@ -115,22 +125,54 @@ void processModeThreadAuto(bool init) {
 				}
 				threadingStart();
 			}
+			ignoreREDButton = false;
 	  }  
   }
 }
 
 void processModeThreadManual(bool init) {
 	if (init) {
+		xAxisStepper.setCurrentPosition(0);
+		if (state[xAxisTo]) {
+			moveXAxisTo(state[xAxisTo], !state[threadDir], getModeCutXNextSpeed());
+		}
+		disablePotX = true;
 		threadingStart();
+	}
+	if (state[xAxisTo] && xAxisStepper.distanceToGo() == 0 && encoderTickDone) {
+		programActive(false);
 	}
 }
 
-void processModeThread(bool init) {
-  if (state[xAxisTo]) {
-    processModeThreadAuto(init);
-  } else {
-    processModeThreadManual(init);
-  }
+void processModeThread(bool init, bool end) {
+	if (end) {
+		ignoreREDButton = true;
+		disablePotsCheck = true;
+		int cutterBuffer = cutDepth ? cutDepth : round(getThreadDepth()*stepsToMM);		
+		if (encoderTickDone) {
+	  	shaftEncoder.tickCallbackEnabled = false;
+			yStepDirection = !state[threadType];
+	  	updateYAxisSpeed(STEPPER_MAX_SAFE_SPEED);
+			yAxisStepper.stepContinuous(cutterBuffer, false);
+		}
+		moveXAxisTo(0, state[threadDir], STEPPER_MAX_SAFE_SPEED);
+		xAxisStepper.stepContinuousToDestination();
+
+		if (encoderTickDone && !cutDepth) {
+			yStepDirection = state[threadType];
+	  	updateYAxisSpeed(STEPPER_MAX_SAFE_SPEED);
+			yAxisStepper.stepContinuous(cutterBuffer, false);
+		}
+		cutDepth = 0;
+		disablePotsCheck = false;
+		ignoreREDButton = false;
+	} else {
+	  if (state[xAxisTo] && state[yAxisTo]) {
+	    processModeThreadAuto(init);
+	  } else {
+	    processModeThreadManual(init);
+	  }
+	}
 }
 
 #endif
