@@ -7,31 +7,38 @@
 #include "Inputs.h"
 
 /*
- - FULL angle mode
-- tune gradient of encoder
-Minor
-  Bugs
-   - some crazy bug while too often program clicks during threaing auto
-  REsearch
+Minor Bugs
+  - some crazy bug while too often program clicks during threaing auto
+REsearch
   - validate actual speed on both axis's - test 4x microstep
   - validate speed slowdown while both working
 */
 
+void triggerCalculateAngle() {
+  if (state[actionMode] == MODE_ANGLE) state[angle] = calculateAngle();
+}
+
 void encoderValueUpdate(int key, int val) {
   switch (key) {
     case actionMode:
-      if (val == MODE_ANGLE && calculateAngle()) state[angle] = calculateAngle();
+      triggerCalculateAngle();
       break;
     case yAxis:
       yAxisStepper.setCurrentPosition(long(val) << 5); // /2/100*stepsToMM
       yAxisStepper.referencePoint = yAxisStepper.currentPosition();
+      triggerCalculateAngle();
       updateYAxisSpeed();
       break;
     case yAxisTo:
       yAxisStepper.referencePoint = yAxisStepper.currentPosition();
+      triggerCalculateAngle();
       break;
     case xAxis:
       xAxisStepper.setCurrentPosition(0);
+      triggerCalculateAngle();
+      break;
+    case xAxisTo:
+      triggerCalculateAngle();
       break;
     case threadStep:
       state[yAxisTo] = state[yAxis] + (state[threadDir] == RIGHT ? -1 : 1)*round(getThreadDepth()*100);
@@ -77,18 +84,18 @@ bool continuousStepperEmergencyFunc() {
   checkRedButton();
   //check for collision
   shaftStatusAction.check();
-  return !programState() && !ignoreREDButton || halt;
+  return !ignoreREDButton && (!programState() || halt);
 }
 
-long _prevPosX = 0, _prevPosY = 0;
-long m = 0;
-void speedCheck() {
-  p(m);
-  // pp(float(abs(_prevPosX-xAxisStepper.currentPosition()))/3200*60, ' ', float(abs(_prevPosY-yAxisStepper.currentPosition()))/3200*60)
-  // _prevPosX = xAxisStepper.currentPosition();
-  // _prevPosY = yAxisStepper.currentPosition();
-}
-TimedAction speedCheckAction = TimedAction(1000, speedCheck);
+// long _prevPosX = 0, _prevPosY = 0;
+// long m = 0;
+// void speedCheck() {
+//   p(m);
+//   // pp(float(abs(_prevPosX-xAxisStepper.currentPosition()))/3200*60, ' ', float(abs(_prevPosY-yAxisStepper.currentPosition()))/3200*60)
+//   // _prevPosX = xAxisStepper.currentPosition();
+//   // _prevPosY = yAxisStepper.currentPosition();
+// }
+// TimedAction speedCheckAction = TimedAction(1000, speedCheck);
 
 void setup() {
   Serial.begin(9600);
@@ -105,14 +112,6 @@ void setup() {
   yAxisStepper.emergencyFunc = continuousStepperEmergencyFunc;
 
   setUpFastPrescaler();
-
-// state[xAxisTo] = 500;
-// xAxisStepper.setCurrentPosition(500 << 5);
-  // state[yAxisTo] = 800;
-//yAxisStepper.setCurrentPosition(1000 << 5);
-//yAxisStepper.referencePoint = 1000 << 5;
-
-//state[actionMode] = MODE_THREAD;
 
   updateStateVars();
   sendScreenUpdate(true);
@@ -137,10 +136,7 @@ void executePrograms() {
 }
 
 void loop() {
-  //m += micros()-bu;
-  //m = m/2;
-  //speedCheckAction.check();
-  
+  //speedCheckAction.check();  
   //could be slowed done when "isRunning"
   readInputRegister();
   
@@ -162,8 +158,6 @@ void loop() {
     processFullManualMode();
   }
   programChange = false;
-
-  //bu = micros();
 }
 
 

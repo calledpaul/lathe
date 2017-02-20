@@ -35,39 +35,38 @@ void setVarioSpeed() {
 		refXSpeed = abs(state[angle]) < 895 ? inputSpeed : 0;
 		refYSpeed = refXSpeed ? refXSpeed*getAxisRatio() : inputSpeed;
 	}
-	//pp(refYSpeed, ' ', refXSpeed)
 	updateXAxisSpeed(refXSpeed);
 	updateYAxisSpeed(refYSpeed);
 }
 //noisy mind
 void processModeAngleAuto(bool init, bool end) {
-	if (init) {
-		originalXAxisTo = state[xAxisTo];
-		state[cut] = LEFT;
-		finalizeAutoAngleCut = false;
-		disablePotY = true;
+	if (init) {		
+		//state[cut] = LEFT;
+		// originalXAxisTo = state[xAxisTo];
+		// finalizeAutoAngleCut = false;
+		// disablePotY = true;
 	}
-	if (finalizeAutoAngleCut) {
-			setVarioSpeed();
-			xAxisStepper.runSpeedToPosition();
-			yAxisStepper.runSpeedToPosition();
-			if (yAxisStepper.distanceToGo() == 0 || xAxisStepper.distanceToGo() == 0) {
-				programCorrectEnd();
-			}
-	} else {
-		processFullCutMode(init, true, getAxisRatio());
+	// if (finalizeAutoAngleCut) {
+	// 		setVarioSpeed();
+	// 		xAxisStepper.runSpeedToPosition();
+	// 		yAxisStepper.runSpeedToPosition();
+	// 		if (yAxisStepper.distanceToGo() == 0 || xAxisStepper.distanceToGo() == 0) {
+	// 			programCorrectEnd();
+	// 		}
+	// } else {
+		processFullCutMode(init, false, getAxisRatio());
 
-		//init finalize
-		if (yAxisStepper.distanceToGo() == 0 && !fullCutModeLastRound) {
-			state[xAxisTo] = originalXAxisTo;
-			moveXAxisTo(state[xAxisTo], LEFT);
-			changeYAxisDirection();
-			finalizeAutoAngleCut = true;
-		}
-	}
+	// 	//init finalize
+	// 	if (yAxisStepper.distanceToGo() == 0 && !fullCutModeLastRound) {
+	// 		state[xAxisTo] = originalXAxisTo;
+	// 		moveXAxisTo(state[xAxisTo], LEFT);
+	// 		changeYAxisDirection();
+	// 		finalizeAutoAngleCut = true;
+	// 	}
+	// }
 }
 
-void processModeAngleManual(bool init, bool end) {
+void processModeAngleManual(bool init) {
 	checkYSwitchAction.check();
   if (ySwitchState != OFF) {
 		disablePotsCheck = true;
@@ -93,10 +92,8 @@ void processModeAngle(bool init, bool end) {
   if (state[angle]) {
   	if (state[xAxisTo] && state[yAxisTo]) {
       processModeAngleAuto(init, end);
-    //} else if (state[yAxisTo]) {
-    //	processModeAngleSemiAuto(init);
     } else {
-      processModeAngleManual(init, end);
+      processModeAngleManual(init);
     }
   }
 }

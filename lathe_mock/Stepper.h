@@ -40,18 +40,13 @@ class AStepper : public AccelStepper {
     }
     void stepContinuous(long steps, bool toPosition = true) {
       long snapshot = currentPosition();
-      //pp(abs(snapshot - currentPosition()), " " , steps)
-      //int entries = 0;
       while (abs(snapshot - currentPosition()) < steps) {
-        //entries++;
         if (emergencyFunc && emergencyFunc()) break;
         if(toPosition)
           runSpeedToPosition();
         else
           runSpeed();
       }
-      //p(entries);
-      //p("  ")
     }
     void stepContinuousToDestination() {
       long snapshot = currentPosition();
@@ -100,11 +95,12 @@ void updateXAxisSpeed(float newSpeed = 0, bool pure = false) {
   } else {
     spd = constrain(newSpeed, 0, STEPPER_MAX_SPEED);
     state[xAxisSpeed] = spd;
-    if (!pure and spd <= 1) {
+    spd *= speedRatio;    
+    if (!pure && spd <= 1) {
       spd /= 2; 
     }
   }
-  xAxisStepper.setSpeedRemovePlay(speedRatio*spd*signedDir[xStepDirection]);
+  xAxisStepper.setSpeedRemovePlay(spd*signedDir[xStepDirection]);
 }
 
 void updateYAxisSpeed(float newSpeed = 0, bool pure = false) {
@@ -112,13 +108,14 @@ void updateYAxisSpeed(float newSpeed = 0, bool pure = false) {
   if (!newSpeed) {
     spd = abs(yAxisStepper.speed());
   } else {
-    spd = constrain(newSpeed, 0, STEPPER_MAX_SPEED);
+    spd = constrain(newSpeed, 0, STEPPER_MAX_SPEED);    
     state[yAxisSpeed] = spd;
-    if (!pure and spd <= 1) {
+    spd *= speedRatio;
+    if (!pure && spd <= 1) {
       spd /= 2; 
     }
   }
-  yAxisStepper.setSpeedRemovePlay(speedRatio*spd*signedDir[yStepDirection]);
+  yAxisStepper.setSpeedRemovePlay(spd*signedDir[yStepDirection]);
 }
 
 void moveXAxisTo(long to, int dir = -1, int speed = 0) {

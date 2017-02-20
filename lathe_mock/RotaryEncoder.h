@@ -40,7 +40,7 @@ public:
     if (r && timeDependant) {
       long m = millis();
       //Serial.println((m - timestmp));
-      r = ((m - timestmp) > 200 ? 1 : (m - timestmp) > 50 ? 10 : 100) * r;
+      r = ((m - timestmp) > 150 ? 1 : (m - timestmp) > 40 ? 10 : 50) * r;
       timestmp = m;
     }
     return r;

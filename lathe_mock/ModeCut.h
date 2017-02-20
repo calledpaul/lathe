@@ -154,9 +154,6 @@ long _calculateNextYStep() {
 void processFullCutMode(bool init, bool skipFinalStep = false, float xToYDecrementRatio = 0) {
   if (init) {
     initXStepperCut();
-    // xAxisStepper.setCurrentPosition(0);
-    // moveXAxisTo(state[xAxisTo], LEFT, getModeCutXNextSpeed());
-
     initYStepperCut();
     if (yAxisStepper.currentPosition() == yAxisStepper.referencePoint) {
       yAxisStepper.stepContinuous(_calculateNextYStep());
@@ -174,8 +171,10 @@ void processFullCutMode(bool init, bool skipFinalStep = false, float xToYDecreme
       {
         long nextYStep = _calculateNextYStep();
         if (xToYDecrementRatio && xAxisStepper.currentPosition() == 0) {
-          state[xAxisTo] -= round(float(nextYStep)/xToYDecrementRatio);
+          state[xAxisTo] -= round(float(nextYStep >> 5)/xToYDecrementRatio);
           if (state[xAxisTo] < 0) state[xAxisTo] = 0;
+          moveXAxisTo(state[xAxisTo], RIGHT, getModeCutXNextSpeed());
+          updateXAxisSpeed();
         }
         yAxisStepper.stepContinuous(nextYStep);
         if (yAxisStepper.distanceToGo() == 0 && state[xAxisTo]) { //state[xAxisTo] rule needed for angle precutting
@@ -203,20 +202,7 @@ void processFullCutMode(bool init, bool skipFinalStep = false, float xToYDecreme
 
 void processModeCut(bool init, bool end) {
   if (end) {
-    // if (state[xAxisTo] && state[yAxisTo]) {
-    //   ignoreREDButton = true;
-    //   disablePotsCheck = true;
 
-    //   yStepDirection = !state[threadType];
-    //   updateYAxisSpeed(STEPPER_MAX_SAFE_SPEED);
-    //   yAxisStepper.stepContinuous(cutterBuffer);
-
-    //   moveXAxisTo(0, state[threadDir], STEPPER_MAX_SAFE_SPEED);
-    //   xAxisStepper.stepContinuousToDestination();
-
-    //   disablePotsCheck = false;
-    //   ignoreREDButton = false;
-    // }
   } else {
     if (state[xAxisTo] && state[yAxisTo]) {    
       processFullCutMode(init);
